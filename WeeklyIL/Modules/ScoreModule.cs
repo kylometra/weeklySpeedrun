@@ -80,9 +80,10 @@ public partial class ManageModule
             WeekEntity? nw = null;
             if (isCurrent)
             {
+                long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
                 nw = _dbContext.Weeks
                     .Where(w => w.GuildId == Context.Guild.Id)
-                    .Where(w => w.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+                    .Where(w => w.StartTimestamp > now)
                     .OrderBy(w => w.StartTimestamp)
                     .FirstOrDefault();
             }
