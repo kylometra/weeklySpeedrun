@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Discord;
+﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
@@ -9,17 +8,10 @@ using WeeklyIL.Utility;
 namespace WeeklyIL.Modules;
 
 [Group("submit", "Commands for submitting your times")]
-public class SubmitModule : InteractionModuleBase<SocketInteractionContext>
+public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, DiscordSocketClient client) : InteractionModuleBase<SocketInteractionContext>
 {
-    private readonly WilDbContext _dbContext;
-    private readonly DiscordSocketClient _client;
+    private readonly WilDbContext _dbContext = contextFactory.CreateDbContext();
 
-    public SubmitModule(IDbContextFactory<WilDbContext> contextFactory, DiscordSocketClient client)
-    {
-        _dbContext = contextFactory.CreateDbContext();
-        _client = client;
-    }
-    
     [SlashCommand("video", "Submits a time with video proof")]
     public async Task WithVideo(string video, ulong? weekId = null)
     {
@@ -31,27 +23,28 @@ public class SubmitModule : InteractionModuleBase<SocketInteractionContext>
             return;
         }
 
-        weekId ??= _dbContext.CurrentWeek(Context.Guild.Id)?.Id ?? 0;
-        WeekEntity? we = _dbContext.Weeks
+        weekId ??= (await _dbContext.CurrentWeek(Context.Guild.Id))?.Id ?? 0;
+        var we = _dbContext.Weeks
             .Where(w => w.GuildId == Context.Guild.Id)
             .FirstOrDefault(w => w.Id == weekId);
         
         if (we == null || we.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds())
         {
-            await RespondAsync("No week to submit to!", ephemeral: true);
+            await RespondAsync("No leaderboard to submit to!", ephemeral: true);
             return;
         }
 
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (!we.Ended && we.StartTimestamp < _dbContext.Weeks
-                .Where(w => w.GuildId == Context.Guild.Id).AsEnumerable()
-                .Where(w => w.StartTimestamp < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
+                .Where(w => w.GuildId == Context.Guild.Id)
+                .Where(w => w.StartTimestamp < now)
                 .OrderBy(w => w.StartTimestamp).Last().StartTimestamp)
         {
-            await RespondAsync("This week is currently not accepting submissions! Try again after the results are posted.", ephemeral: true);
+            await RespondAsync("This leaderboard is currently not accepting submissions! Try again after the results are posted.", ephemeral: true);
             return;
         }
 
-        if (!(Uri.TryCreate(video, UriKind.Absolute, out Uri? result)
+        if (!(Uri.TryCreate(video, UriKind.Absolute, out var result)
               && (result.Scheme == Uri.UriSchemeHttp || result.Scheme == Uri.UriSchemeHttps)))
         {
             await RespondAsync("Video is not a valid link!", ephemeral: true);
@@ -70,16 +63,16 @@ public class SubmitModule : InteractionModuleBase<SocketInteractionContext>
             .WithButton("Verify", "verify_button", ButtonStyle.Success)
             .WithButton("Reject", "reject_button", ButtonStyle.Danger);
 
-        var channel = (SocketTextChannel)await _client.GetChannelAsync(subChannel);
+        var channel = (SocketTextChannel)await client.GetChannelAsync(subChannel);
 
         string level = we.Level;
-        Uri? uri = level.GetUriFromString();
+        var uri = level.GetUriFromString();
         if (uri != null)
         {
             level = level.Replace(uri.OriginalString, $"<{uri.OriginalString}>");
         }
         
-        await channel.SendMessageAsync($"ID: {score.Entity.Id} | User: {Context.User.Username} | Week: {level}\n\nVideo: {video}", components: cb.Build());
+        await channel.SendMessageAsync($"ID: {score.Entity.Id} | User: {Context.User.Username} | Level: {level}\n\nVideo: {video}", components: cb.Build());
         
         await RespondAsync("Video submitted! It will be timed and verified soon.", ephemeral: true);
     }
@@ -87,16 +80,14 @@ public class SubmitModule : InteractionModuleBase<SocketInteractionContext>
     [SlashCommand("blank", "Submits a blank time to the leaderboard - you won't have a time without proof")]
     public async Task NoVideo(ulong? weekId = null)
     {
-        weekId ??= _dbContext.CurrentWeek(Context.Guild.Id)?.Id ?? 0;
-        WeekEntity? we = _dbContext.Weeks
+        weekId ??= (await _dbContext.CurrentWeek(Context.Guild.Id))?.Id ?? 0;
+        var we = await _dbContext.Weeks
             .Where(w => w.GuildId == Context.Guild.Id)
-            .FirstOrDefault(w => w.Id == weekId);
+            .FirstOrDefaultAsync(w => w.Id == weekId);
         
-        if (we == null
-            || (we.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds() 
-                && !await _dbContext.UserIsOrganizer(Context)))
+        if (we == null || (we.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds() && !await _dbContext.UserIsOrganizer(Context)))
         {
-            await RespondAsync("No week to submit to!", ephemeral: true);
+            await RespondAsync("No leaderboard to submit to!", ephemeral: true);
             return;
         }
         
@@ -111,7 +102,7 @@ public class SubmitModule : InteractionModuleBase<SocketInteractionContext>
         
         await RespondAsync("Submitted without proof! You'll show up on the leaderboard without a time.", ephemeral: true);
         
-        SocketGuildUser? user = Context.Guild.GetUser(Context.User.Id);
+        var user = Context.Guild.GetUser(Context.User.Id);
         await user.AddRolesAsync(_dbContext.Guilds
             .Include(g => g.GameRoles)
             .First(g => g.Id == we.GuildId).GameRoles

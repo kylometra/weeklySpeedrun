@@ -1,6 +1,7 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using Microsoft.EntityFrameworkCore;
 using WeeklyIL.Database;
 
 namespace WeeklyIL.Utility;
@@ -37,44 +38,40 @@ public static class DbHelper
         await dbContext.SaveChangesAsync();
     }
     
-    public static WeekEntity? CurrentWeek(this WilDbContext dbContext, ulong guild) =>
-        dbContext.Weeks
-            .Where(w => w.GuildId == guild).AsEnumerable()
-            .Where(w => w.StartTimestamp < DateTimeOffset.UtcNow.ToUnixTimeSeconds())
-            .OrderByDescending(w => w.StartTimestamp).FirstOrDefault();
-    
-    public static WeekEntity? NextWeek(this WilDbContext dbContext, ulong guild) =>
-        dbContext.Weeks
-            .Where(w => w.GuildId == guild).AsEnumerable()
-            .Where(w => w.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds())
-            .OrderBy(w => w.StartTimestamp).FirstOrDefault();
-    
-    public static MonthEntity? CurrentMonth(this WilDbContext dbContext, ulong guild)
+    public static async Task<WeekEntity?> CurrentWeek(this WilDbContext dbContext, ulong guild)
     {
-        ulong? cw = CurrentWeek(dbContext, guild)?.MonthId;
-        return cw == null ? null : Month(dbContext, (ulong)cw);
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        return await dbContext.Weeks
+            .Where(w => w.GuildId == guild)
+            .Where(w => w.StartTimestamp < now)
+            .OrderByDescending(w => w.StartTimestamp)
+            .FirstOrDefaultAsync();
+    }
+
+    public static async Task<WeekEntity?> NextWeek(this WilDbContext dbContext, ulong guild)
+    {
+        long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
+        return await dbContext.Weeks
+            .Where(w => w.GuildId == guild)
+            .Where(w => w.StartTimestamp > now)
+            .OrderBy(w => w.StartTimestamp)
+            .FirstOrDefaultAsync();
     }
 
     public static async Task<bool> UserIsOrganizer(this WilDbContext dbContext, SocketInteractionContext context)
     {
         await dbContext.CreateGuildIfNotExists(context.Guild.Id);
         
-        GuildEntity g = dbContext.Guild(context.Guild.Id);
+        var g = dbContext.Guild(context.Guild.Id);
         
-        return context.User is SocketGuildUser user
-               && user.Roles.Any(r =>
-                   r.Id == g.OrganizerRole
-                   || r.Id == g.ModeratorRole);
+        return context.User is SocketGuildUser user && user.Roles.Any(r =>
+            r.Id == g.OrganizerRole || r.Id == g.ModeratorRole
+        );
     }
 
     public static GuildEntity Guild(this WilDbContext dbContext, ulong id)
     {
         return dbContext.Guilds.Find(id)!;
-    }
-    
-    public static MonthEntity Month(this WilDbContext dbContext, ulong id)
-    {
-        return dbContext.Months.Find(id)!;
     }
     
     public static WeekEntity Week(this WilDbContext dbContext, ulong id)
@@ -103,9 +100,9 @@ public static class DbHelper
 
         client.GetGuild(week.GuildId).DownloadUsersAsync().Wait();
         
-        foreach (ScoreEntity score in scores.AsEnumerable().OrderBy(s => s.TimeMs))
+        foreach (var score in scores.AsEnumerable().OrderBy(s => s.TimeMs))
         {
-            SocketUser? u = client.GetUser(score.UserId);
+            var u = client.GetUser(score.UserId);
             string name = u == null ? "unknown" : u.Username;
             
             if (score.Video == null)
@@ -136,7 +133,7 @@ public static class DbHelper
             .WithDescription(board)
             .WithFooter($"ID: {week.Id}");
 
-        Uri? uri = week.Level.GetUriFromString();
+        var uri = week.Level.GetUriFromString();
         if (uri == null)
         {
             eb.WithAuthor(week.Level);
@@ -152,55 +149,5 @@ public static class DbHelper
         eb.WithTitle($"{remaining.Days}d{remaining:hh}h{remaining:mm}m remaining");
 
         return eb;
-    }
-    
-    public static EmbedBuilder LeaderboardBuilder(this WilDbContext dbContext, DiscordSocketClient client, MonthEntity month)
-    {
-        string board = string.Empty;
-        int place = 1;
-
-        var weeks = dbContext.Weeks.Where(w => w.MonthId == month.Id); // get weeks in month
-        
-        client.GetGuild(month.GuildId).DownloadUsersAsync().Wait();
-        
-        foreach (var score in weeks
-                     .SelectMany(w => dbContext.Scores.Where(s => s.WeekId == w.Id)) // get scores from every week
-                     .Where(s => s.Verified) // keep verified runs
-                     .Where(s => s.Video != null) // keep scores with video
-                     .GroupBy(s => s.UserId).AsEnumerable() // group scores by user id
-                     .Where(g => g.Select(s => s.WeekId).Distinct().Count() == weeks.Count()) // keep runs from users who have a video on each week
-                     .Select(g => new
-                     {
-                         UserId = g.Key,
-                         TimeMs = g
-                             .GroupBy(s => s.WeekId) // group user's scores by week id
-                             .Select(std => std.OrderBy(s => s.TimeMs).First().TimeMs) // get the best for each week
-                             .Aggregate(0U, (total, time) => total + (uint)time!) // combine best times
-                     })
-                     .OrderBy(result => result.TimeMs)) // order by time
-        {
-            SocketUser? u = client.GetUser(score.UserId);
-            string name = u == null ? "unknown" : u.Username;
-            
-            board += place switch
-            {
-                1 => ":first_place:",
-                2 => ":second_place:",
-                3 => ":third_place:",
-                _ => ":checkered_flag:"
-            };
-            var ts = new TimeSpan(score.TimeMs * TimeSpan.TicksPerMillisecond);
-            board += $@" `{place:D2}` - `{ts:h\:mm\:ss\.fff}` - {name}"+"\n";
-            place++;
-        }
-
-        string title = month.RoleId == null
-            ? $"Month {month.Id}"
-            : $"{client.GetGuild(month.GuildId).GetRole((ulong)month.RoleId).Name} month";
-
-        return new EmbedBuilder()
-            .WithTitle(title)
-            .WithDescription(board)
-            .WithFooter($"ID: {month.Id}; Weeks: {string.Join(", ", weeks.Select(w => w.Id))}");
     }
 }

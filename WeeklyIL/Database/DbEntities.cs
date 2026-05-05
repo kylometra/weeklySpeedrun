@@ -5,20 +5,14 @@ namespace WeeklyIL.Database;
 
 public class GuildEntity
 {
-    public GuildEntity()
-    {
-        WeeklyRoles = new HashSet<WeeklyRole>();
-        GameRoles = new HashSet<GameRole>();
-    }
-    
     [Key]
     public ulong Id { get; set; }
     public ulong SubmissionsChannel { get; set; }
     public ulong AnnouncementsChannel { get; set; }
     public ulong ModeratorRole { get; set; }
     public ulong OrganizerRole { get; set; }
-    public ISet<WeeklyRole> WeeklyRoles { get; set; }
-    public ISet<GameRole> GameRoles { get; set; }
+    public ISet<WeeklyRole> WeeklyRoles { get; set; } = new HashSet<WeeklyRole>();
+    public ISet<GameRole> GameRoles { get; set; } = new HashSet<GameRole>();
 }
 
 public class UserEntity
@@ -26,16 +20,6 @@ public class UserEntity
     [Key]
     public ulong Id { get; set; }
     public uint WeeklyWins { get; set; }
-    public uint MonthlyWins { get; set; }
-}
-
-public class MonthEntity
-{
-    [Key]
-    [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-    public ulong Id { get; set; }
-    public ulong GuildId { get; set; }
-    public ulong? RoleId { get; set; }
 }
 
 public class WeekEntity

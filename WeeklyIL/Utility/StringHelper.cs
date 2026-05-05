@@ -6,7 +6,7 @@ public static partial class StringHelper
 {
     public static Uri? GetUriFromString(this string str)
     {
-        Match match = UriRegex().Match(str);
+        var match = UriRegex().Match(str);
         return match.Success ? new Uri(match.Value) : null;
     }
 

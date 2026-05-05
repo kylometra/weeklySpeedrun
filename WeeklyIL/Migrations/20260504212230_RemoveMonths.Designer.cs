@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using WeeklyIL.Database;
 
@@ -10,9 +11,11 @@ using WeeklyIL.Database;
 namespace WeeklyIL.Migrations
 {
     [DbContext(typeof(WilDbContext))]
-    partial class WilDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260504212230_RemoveMonths")]
+    partial class RemoveMonths
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "8.0.8");

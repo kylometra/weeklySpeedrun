@@ -1,7 +1,6 @@
 ﻿using System.Reflection;
 using Discord;
 using Discord.Interactions;
-using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -9,7 +8,7 @@ using Microsoft.Extensions.Hosting;
 using WeeklyIL.Database;
 using WeeklyIL.Services;
 
-using IHost host = Host.CreateDefaultBuilder(args)
+using var host = Host.CreateDefaultBuilder(args)
     .ConfigureAppConfiguration(config =>
     {
         config.SetBasePath(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!);
@@ -23,8 +22,8 @@ using IHost host = Host.CreateDefaultBuilder(args)
             GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
         }));
         services.AddSingleton<InteractionService>();
-        services.AddSingleton<WeekEndTimers>();
-        services.AddHostedService<WeekEndService>();
+        services.AddSingleton<CloseSubmissionsTimers>();
+        services.AddHostedService<CloseSubmissionsService>();
         services.AddHostedService<InteractionHandlingService>();
         services.AddHostedService<DiscordStartupService>();
     })

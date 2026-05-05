@@ -5,7 +5,7 @@ using WeeklyIL.Database;
 
 namespace WeeklyIL.Services;
 
-public class WeekEndService(IDbContextFactory<WilDbContext> contextFactory, WeekEndTimers timers, DiscordSocketClient client) : IHostedService
+public class CloseSubmissionsService(IDbContextFactory<WilDbContext> contextFactory, CloseSubmissionsTimers timers, DiscordSocketClient client) : IHostedService
 {
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -15,7 +15,7 @@ public class WeekEndService(IDbContextFactory<WilDbContext> contextFactory, Week
     private async Task Ready()
     {
         var context = await contextFactory.CreateDbContextAsync();
-        foreach (GuildEntity guild in context.Guilds)
+        foreach (var guild in context.Guilds)
         {
             // this was a failed attempt to go back and end weeks if the bot was down when they were supposed to end
             // hopefully it won't be an issue anyway (foreshadowing)
