@@ -11,15 +11,12 @@ public class InfoModule : InteractionModuleBase<SocketInteractionContext>
             
             "## Every month we choose a new level/category to run\n\n" +
             
-            "- View the current level's leaderboard with `/leaderboard`\n" +
-            "- Submit your times with `/submit video`\n" +
+            "- Submit your recorded times with `/submit video`\n" +
             "- Want to submit but can't record a video? Submit with `/submit blank`\n" +
-            "- Get a runner role for the relevant game when your run is verified!\n" +
-            "- Get a counting \"IL Wins\" role for being #1 when the leaderboard closes!\n\n" +
-            
+            "- View the current level's leaderboard with `/lb`\n" +
             "- See previous levels with `/past`\n" +
-            "- Add a level ID parameter to any relevant command to make it apply to the specified level\n" +
+            "- Use `/stats` to see info about your submissions\n\n" +
             
-            "- Use `/stats` to see your stats\n" +
-            "  - Add a user parameter to see the mentioned user's stats", ephemeral: true);
+            "- Get a runner role for the relevant game when your run is verified!\n" +
+            "- Get a counting \"IL Wins\" role for being #1 when the leaderboard closes!", ephemeral: true);
 }
