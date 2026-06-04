@@ -48,8 +48,8 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
             
             var dueTime = new TimeSpan(seconds * TimeSpan.TicksPerSecond);
             timers.Add(i == _intervals.Length - 1
-                ? new Timer(o => OnSubmissionsClose(o), dbContext.CurrentWeek(id), dueTime, Timeout.InfiniteTimeSpan)
-                : new Timer(o => OnCountdown(o), nextWeek, dueTime, Timeout.InfiniteTimeSpan));
+                ? new Timer(o => _ = OnSubmissionsClose(o), await dbContext.CurrentWeek(id), dueTime, Timeout.InfiniteTimeSpan)
+                : new Timer(o => _ = OnCountdown(o), nextWeek, dueTime, Timeout.InfiniteTimeSpan));
         }
         _allTimers[id] = timers;
     }
