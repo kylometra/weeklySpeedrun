@@ -1,6 +1,7 @@
 ﻿using System.Globalization;
 using Discord;
 using Discord.Interactions;
+using Discord.Rest;
 using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using WeeklyIL.Database;
@@ -141,7 +142,13 @@ public class VerifyModule(
             Console.WriteLine(e);
         }
 
-        await (await Context.Channel.GetMessageAsync(context.MessageId)).DeleteAsync();
+        // remove interaction buttons
+        var msg = await Context.Channel.GetMessageAsync(context.MessageId) as RestUserMessage;
+        if (msg == null!) return;
+        await msg.ModifyAsync(m => { m.Components = new ComponentBuilder().Build(); });
+        
+        // clear the interaction context
+        VerifyComponentInteractions.Interactions.Remove(Context.Interaction.User.Id);
     }
     
     [ModalInteraction("reject_run", true)]
@@ -176,8 +183,10 @@ public class VerifyModule(
             .OrderByDescending(w => w.StartTimestamp).First().StartTimestamp;
         if (!week.Ended && week.StartTimestamp < nextWeekStart) await levelEnder.TryCloseSubmissions(week);
         
-        // delete the submission message
-        await (await Context.Channel.GetMessageAsync(context.MessageId)).DeleteAsync();
+        // remove interaction buttons
+        var msg = await Context.Channel.GetMessageAsync(context.MessageId) as RestUserMessage;
+        if (msg == null!) return;
+        await msg.ModifyAsync(m => { m.Components = new ComponentBuilder().Build(); });
 
         // clear the interaction context
         VerifyComponentInteractions.Interactions.Remove(Context.Interaction.User.Id);
