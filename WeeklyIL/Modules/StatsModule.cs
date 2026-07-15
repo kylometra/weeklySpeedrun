@@ -21,8 +21,9 @@ public class StatsModule(IDbContextFactory<WilDbContext> contextFactory, Discord
 
         var ue = _dbContext.User(user.Id);
 
+        ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
         var guildWeeks = _dbContext.Weeks
-            .Where(w => w.GuildId == Context.Guild.Id)
+            .Where(w => w.GuildId == guildId)
             .Select(w => w.Id);
 
         var submissions = _dbContext.Scores
@@ -47,6 +48,4 @@ public class StatsModule(IDbContextFactory<WilDbContext> contextFactory, Discord
 
         await RespondAsync(embed: eb.Build());
     }
-    
-    
 }

@@ -16,14 +16,14 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
     public async Task WithVideo(string video, ulong? weekId = null)
     {
         await _dbContext.CreateGuildIfNotExists(Context.Guild.Id);
-        ulong subChannel = _dbContext.Guilds.First(g => g.Id == Context.Guild.Id).SubmissionsChannel;
+
+        ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
+        ulong subChannel = _dbContext.Guilds.First(g => g.Id == guildId).SubmissionsChannel;
         if (subChannel == 0)
         {
             await RespondAsync("No submission channel to submit to!", ephemeral: true);
             return;
         }
-
-        ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
 
         weekId ??= (await _dbContext.CurrentWeek(guildId))?.Id ?? 0;
         var we = _dbContext.Weeks
