@@ -12,11 +12,12 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
     private readonly WilDbContext _dbContext = contextFactory.CreateDbContext();
 
     [SlashCommand("lb", "Shows the leaderboard for a level")]
-    public async Task ViewLevel(ulong? id = null)
+    public async Task ViewLeaderboard(ulong? id = null)
     {
         await _dbContext.CreateGuildIfNotExists(Context.Guild.Id);
         
         // check if the level is assigned to the current guild
+        bool isCurrent = id == null;
         var week = id == null 
             ? await _dbContext.CurrentWeek(Context.Guild.Id) 
             : await _dbContext.Weeks.FirstOrDefaultAsync(w => w.Id == id);
@@ -24,24 +25,25 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
         bool secret = week?.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         bool organizer = await _dbContext.UserIsOrganizer(Context);
         
+        ulong guildid = _dbContext.EffectiveGuild(Context.Guild.Id);
         if (week == null 
-            || week.GuildId != Context.Guild.Id
+            || week.GuildId != guildid
             || (secret && !organizer))
         {
             await RespondAsync("That leaderboard doesn't exist!", ephemeral: true);
             return;
         }
 
-        bool isCurrent = week.Id == (await _dbContext.CurrentWeek(Context.Guild.Id))?.Id;
         bool showVideo = !isCurrent || organizer || week.ShowVideo;
         secret |= isCurrent && showVideo && !week.ShowVideo;
+
 
         WeekEntity? nw = null;
         long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (isCurrent)
         {
             nw = await _dbContext.Weeks
-                .Where(w => w.GuildId == Context.Guild.Id)
+                .Where(w => w.GuildId == guildid)
                 .Where(w => w.StartTimestamp > now)
                 .OrderBy(w => w.StartTimestamp)
                 .FirstOrDefaultAsync();
@@ -50,7 +52,7 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
         var sb = new SelectMenuBuilder()
             .WithPlaceholder("Select a leaderboard")
             .WithCustomId("view-week");
-        foreach (var w in _dbContext.Weeks.Where(w => w.GuildId == Context.Guild.Id)
+        foreach (var w in _dbContext.Weeks.Where(w => w.GuildId == guildid)
                      .Where(w => w.StartTimestamp <= now)
                      .OrderByDescending(w => (long)w.Id)
                      .Take(25))

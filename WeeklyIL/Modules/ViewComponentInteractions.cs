@@ -17,7 +17,7 @@ public class ViewComponentInteractions(IDbContextFactory<WilDbContext> contextFa
         ulong id = ulong.Parse(Context.Interaction.Data.Values.First());
         var week = await _dbContext.Weeks.FindAsync(id);
         if (week == null 
-            || week.GuildId != Context.Guild.Id)
+            || week.GuildId != _dbContext.EffectiveGuild(Context.Guild.Id))
         {
             await RespondAsync("That level doesn't exist!", ephemeral: true);
             return;

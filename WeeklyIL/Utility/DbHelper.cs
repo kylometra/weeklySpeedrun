@@ -37,9 +37,17 @@ public static class DbHelper
         
         await dbContext.SaveChangesAsync();
     }
+
+    public static ulong EffectiveGuild(this WilDbContext dbContext, ulong guild)
+    {
+        var g = dbContext.Guild(guild);
+        return g.ProxyFor != 0 ? g.ProxyFor : guild;
+    }
     
     public static async Task<WeekEntity?> CurrentWeek(this WilDbContext dbContext, ulong guild)
     {
+        guild = dbContext.EffectiveGuild(guild);
+        
         long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         return await dbContext.Weeks
             .Where(w => w.GuildId == guild)
@@ -50,6 +58,8 @@ public static class DbHelper
 
     public static async Task<WeekEntity?> NextWeek(this WilDbContext dbContext, ulong guild)
     {
+        guild = dbContext.EffectiveGuild(guild);
+        
         long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         return await dbContext.Weeks
             .Where(w => w.GuildId == guild)
@@ -63,6 +73,7 @@ public static class DbHelper
         await dbContext.CreateGuildIfNotExists(context.Guild.Id);
         
         var g = dbContext.Guild(context.Guild.Id);
+        if (g.ProxyFor != 0) return false;
         
         return context.User is SocketGuildUser user && user.Roles.Any(r =>
             r.Id == g.OrganizerRole || r.Id == g.ModeratorRole

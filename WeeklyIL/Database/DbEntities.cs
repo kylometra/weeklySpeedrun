@@ -11,6 +11,7 @@ public class GuildEntity
     public ulong AnnouncementsChannel { get; set; }
     public ulong ModeratorRole { get; set; }
     public ulong OrganizerRole { get; set; }
+    public ulong ProxyFor { get; set; }
     public ISet<WeeklyRole> WeeklyRoles { get; set; } = new HashSet<WeeklyRole>();
     public ISet<GameRole> GameRoles { get; set; } = new HashSet<GameRole>();
 }

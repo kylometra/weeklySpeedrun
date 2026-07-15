@@ -15,17 +15,6 @@ public partial class ManageModule
     {
         private readonly WilDbContext _dbContext = contextFactory.CreateDbContext();
 
-        private async Task<bool> PermissionsFail()
-        {
-            if (await _dbContext.UserIsOrganizer(Context))
-            {
-                return false;
-            }
-
-            await RespondAsync("You can't do that here!", ephemeral: true);
-            return true;
-        }
-
         [SlashCommand("moderator", "Sets the moderator permissions role")]
         [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task SetModRole(SocketRole role)
@@ -51,13 +40,9 @@ public partial class ManageModule
         }
 
         [SlashCommand("weekly", "Sets a role for a certain number of weekly WRs")]
+        [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task SetWeeklyRole(int requirement, SocketRole role)
         {
-            if (await PermissionsFail())
-            {
-                return;
-            }
-
             if (requirement < 1)
             {
                 await RespondAsync($"Requirement cannot be less than 1.", ephemeral: true);
@@ -82,13 +67,9 @@ public partial class ManageModule
         }
 
         [SlashCommand("game", "Sets a role for a game")]
+        [RequireUserPermission(GuildPermission.ManageRoles)]
         public async Task GameRole(string? game = null, SocketRole? role = null)
         {
-            if (await PermissionsFail())
-            {
-                return;
-            }
-
             if (game == null && role == null)
             {
                 string desc = _dbContext.Guilds

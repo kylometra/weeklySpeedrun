@@ -1,4 +1,5 @@
-﻿using Discord.WebSocket;
+﻿using Discord;
+using Discord.WebSocket;
 using Microsoft.EntityFrameworkCore;
 using WeeklyIL.Database;
 using WeeklyIL.Utility;
@@ -28,10 +29,7 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
         bool notnull = _allTimers.TryGetValue(id, out var timers);
         if (notnull)
         {
-            foreach (var timer in timers!)
-            {
-                await timer.DisposeAsync();
-            }
+            foreach (var timer in timers!) await timer.DisposeAsync();
             timers.Clear();
         }
         else
@@ -39,6 +37,8 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
             timers = [];
             _allTimers.Add(id, timers);
         }
+        
+        if (dbContext.Guild(id).ProxyFor != 0) return;
 
         for (int i = 0; i < _intervals.Length; i++)
         {
@@ -53,6 +53,18 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
         }
         _allTimers[id] = timers;
     }
+
+    private async Task AnnounceToProxyGuilds(ulong of, string text, Embed embed = null!)
+    {
+        var dbContext = await contextFactory.CreateDbContextAsync();
+        
+        foreach (var ge in dbContext.Guilds.Where(g => g.Id == of || g.ProxyFor == of))
+        {
+            var guild = client.GetGuild(ge.Id);
+            var channel = guild.GetTextChannel(dbContext.Guild(guild.Id).AnnouncementsChannel);
+            await channel.SendMessageAsync(text, embed: embed);
+        }
+    }
     
     private async Task OnCountdown(object? o)
     {
@@ -60,12 +72,8 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
         
         long seconds = week.StartTimestamp - DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var remaining = new TimeSpan(seconds * TimeSpan.TicksPerSecond);
-        
-        var dbContext = await contextFactory.CreateDbContextAsync();
-        var guild = client.GetGuild(week.GuildId);
-        var channel = guild.GetTextChannel(dbContext.Guild(week.GuildId).AnnouncementsChannel);
 
-        await channel.SendMessageAsync($@"Submissions close in `{Math.Floor(remaining.TotalHours)}h {remaining:mm}m`!");
+        await AnnounceToProxyGuilds(week.GuildId, $@"Submissions close in `{Math.Floor(remaining.TotalHours)}h {remaining:mm}m`!");
     }
     
     private async Task OnSubmissionsClose(object? o)
@@ -74,15 +82,7 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
 
         if (o == null) return; // this is the first week in the guild, im too lazy rn to make it announce anything
         var week = (WeekEntity)o;
-        
-        var dbContext = await contextFactory.CreateDbContextAsync();
-        var guild = client.GetGuild(week.GuildId);
-        var channel = guild.GetTextChannel(dbContext.Guild(week.GuildId).AnnouncementsChannel);
-
-        if (!await TryCloseSubmissions(week))
-        {
-            await channel.SendMessageAsync("Submissions closed! Results will be posted when all currently pending runs are verified.");
-        }
+        await TryCloseSubmissions(week);
     }
 
     public async Task<bool> TryCloseSubmissions(WeekEntity week)
@@ -91,11 +91,9 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
 
         await UpdateGuildTimer(week.GuildId);
 
-        var guild = client.GetGuild(week.GuildId);
-        var channel = guild.GetTextChannel(dbContext.Guild(week.GuildId).AnnouncementsChannel);
-
         if (dbContext.Scores.Where(s => s.WeekId == week.Id).Any(s => !s.Verified))
         {
+            await AnnounceToProxyGuilds(week.GuildId, "Submissions closed! Results will be posted when all currently pending runs are verified.");
             return false;
         }
         
@@ -104,10 +102,10 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
         await dbContext.SaveChangesAsync();
         
         var eb = dbContext.LeaderboardBuilder(client, week, null, true);
-        await channel.SendMessageAsync("Submissions closed! This is the leaderboard as of now:", embed: eb.Build());
+        await AnnounceToProxyGuilds(week.GuildId, "Submissions closed! This is the leaderboard as of now:", embed: eb.Build());
 
         var currentWeek = await dbContext.CurrentWeek(week.GuildId);
-        await channel.SendMessageAsync($"Next: {currentWeek!.Level}");
+        await AnnounceToProxyGuilds(week.GuildId, $"Next: {currentWeek!.Level}");
 
         var first = dbContext.Scores
             .Where(s => s.WeekId == week.Id)
@@ -122,6 +120,7 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
         var ue = dbContext.User(first.UserId);
         ue.WeeklyWins++;
 
+        var guild = client.GetGuild(week.GuildId);
         var user = guild.GetUser(first.UserId);
         var weeklyRoles = dbContext.Guilds
             .Include(g => g.WeeklyRoles)
@@ -132,15 +131,11 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
             .MaxBy(r => r.Requirement)!.RoleId);
 
         await dbContext.SaveChangesAsync();
-        
         return true;
     }
 
     public async Task DisposeAsync()
     {
-        foreach (var t in _allTimers.SelectMany(kvp => kvp.Value))
-        {
-            await t.DisposeAsync();
-        }
+        foreach (var t in _allTimers.SelectMany(kvp => kvp.Value)) await t.DisposeAsync();
     }
 }

@@ -7,10 +7,9 @@ using WeeklyIL.Utility;
 
 namespace WeeklyIL.Modules;
 
-public class PastModule(IDbContextFactory<WilDbContext> contextFactory, DiscordSocketClient client) : InteractionModuleBase<SocketInteractionContext>
+public class PastModule(IDbContextFactory<WilDbContext> contextFactory) : InteractionModuleBase<SocketInteractionContext>
 {
     private readonly WilDbContext _dbContext = contextFactory.CreateDbContext();
-    private readonly DiscordSocketClient _client = client;
 
     [SlashCommand("past", "Shows previous levels")]
     public async Task PastLevels()

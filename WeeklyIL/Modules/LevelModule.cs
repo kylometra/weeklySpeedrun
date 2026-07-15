@@ -17,10 +17,7 @@ public partial class ManageModule
 
         private async Task<bool> PermissionsFail()
         {
-            if (await _dbContext.UserIsOrganizer(Context))
-            {
-                return false;
-            }
+            if (await _dbContext.UserIsOrganizer(Context)) return false;
 
             await RespondAsync("You can't do that here!", ephemeral: true);
             return true;
@@ -29,10 +26,7 @@ public partial class ManageModule
         [SlashCommand("queue", "Shows the queue of upcoming levels")]
         public async Task WeeksQueue()
         {
-            if (await PermissionsFail())
-            {
-                return;
-            }
+            if (await PermissionsFail()) return;
 
             var eb = new EmbedBuilder().WithTitle("Upcoming levels");
             long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
@@ -50,10 +44,7 @@ public partial class ManageModule
         [SlashCommand("new", "Create a new level and add it to the queue")]
         public async Task NewLevel()
         {
-            if (await PermissionsFail())
-            {
-                return;
-            }
+            if (await PermissionsFail()) return;
 
             var week = _dbContext.Weeks.OrderBy(w => w.StartTimestamp)
                 .LastOrDefault(w => w.GuildId == Context.Guild.Id);
@@ -70,10 +61,7 @@ public partial class ManageModule
         [SlashCommand("remove", "Remove a level")]
         public async Task RemoveLevel(ulong id)
         {
-            if (await PermissionsFail())
-            {
-                return;
-            }
+            if (await PermissionsFail()) return;
 
             var week = _dbContext.Weeks.Where(w => w.GuildId == Context.Guild.Id).FirstOrDefault(w => w.Id == id);
             if (week == null)
@@ -105,12 +93,8 @@ public partial class ManageModule
             public string Level { get; set; }
 
             [InputLabel("What game?")]
-            [ModalTextInput("game_name", placeholder: "Exactly how it's written in the /role game command")]
+            [ModalTextInput("game_name", placeholder: "lbp2")]
             public string Game { get; set; }
-
-            [InputLabel("Show videos before the week is over?")]
-            [ModalTextInput("show_video", placeholder: "True/False")]
-            public string ShowVideo { get; set; }
         }
 
         [ModalInteraction("first_week", true)]
@@ -121,7 +105,7 @@ public partial class ManageModule
                 .First(g => g.Id == Context.Guild.Id)
                 .GameRoles.All(r => r.Game != modal.Game)) return;
 
-            await CreateWeek(modal.Timestamp, modal.Level, modal.Game, bool.Parse(modal.ShowVideo));
+            await CreateWeek(modal.Timestamp, modal.Level, modal.Game, true);
         }
 
         public class NewLevelModal : IModal
@@ -134,12 +118,8 @@ public partial class ManageModule
             public string Level { get; set; }
 
             [InputLabel("What game?")]
-            [ModalTextInput("game_name", placeholder: "Exactly how it's written in the /role game command")]
+            [ModalTextInput("game_name", placeholder: "lbp2")]
             public string Game { get; set; }
-
-            [InputLabel("Show videos before the week is over?")]
-            [ModalTextInput("show_video", placeholder: "True/False")]
-            public string ShowVideo { get; set; }
         }
 
         [ModalInteraction("new_week", true)]
@@ -153,7 +133,7 @@ public partial class ManageModule
                 .First(w => w.GuildId == Context.Guild.Id).StartTimestamp + 2592000;
             uint now = (uint)DateTimeOffset.UtcNow.ToUnixTimeSeconds() + 86400;
             if (time < now) time = now;
-            await CreateWeek(time, modal.Level, modal.Game, bool.Parse(modal.ShowVideo));
+            await CreateWeek(time, modal.Level, modal.Game, true);
         }
 
         private async Task CreateWeek(uint time, string level, string game, bool showVideo)
@@ -173,17 +153,14 @@ public partial class ManageModule
 
             await RespondAsync(
                 $"Week created on <t:{time}:f>! `id: {entry.Entity.Id}`\n" +
-                $"You can edit this with `/week edit {entry.Entity.Id}`.",
+                $"You can edit this with `/manage level edit id:{entry.Entity.Id}`.",
                 ephemeral: true);
         }
 
         [SlashCommand("edit", "Edit a week by id")]
         public async Task EditWeek(ulong id)
         {
-            if (await PermissionsFail())
-            {
-                return;
-            }
+            if (await PermissionsFail()) return;
 
             var week = _dbContext.Weeks
                 .Where(w => w.GuildId == Context.Guild.Id)
@@ -199,14 +176,12 @@ public partial class ManageModule
             var mb = new ModalBuilder()
                 .WithCustomId("edit_week")
                 .WithTitle("Edit week")
-                .AddTextInput("Start of the week as a unix timestamp", "timestamp", placeholder: "1727601767",
-                    value: week.StartTimestamp.ToString())
+                .AddTextInput("Start of the week as a unix timestamp", "timestamp", 
+                    placeholder: week.StartTimestamp.ToString(), value: week.StartTimestamp.ToString())
                 .AddTextInput("What are we running?", "level_name",
-                    placeholder: "https://beacon.lbpunion.com/slot/17962/getting-over-it-14-players", value: week.Level)
+                    placeholder: week.Level, value: week.Level)
                 .AddTextInput("What game?", "game_name",
-                    placeholder: "Exactly how it's written in the /role game command", value: week.Game)
-                .AddTextInput("Show videos before the week is over?", "show_video", placeholder: "True/False",
-                    value: week.ShowVideo.ToString())
+                    placeholder: week.Game, value: week.Game)
                 .AddTextInput("ID", "week_id", value: id.ToString());
 
             await RespondWithModalAsync(mb.Build());
@@ -223,8 +198,6 @@ public partial class ManageModule
             [ModalTextInput("game_name")] public string Game { get; set; }
 
             [ModalTextInput("week_id")] public ulong WeekId { get; set; }
-
-            [ModalTextInput("show_video")] public string ShowVideo { get; set; }
         }
 
         [ModalInteraction("edit_week", true)]
@@ -240,7 +213,7 @@ public partial class ManageModule
             week.StartTimestamp = modal.Timestamp;
             week.Level = modal.Level;
             week.Game = modal.Game;
-            week.ShowVideo = bool.Parse(modal.ShowVideo);
+            week.ShowVideo = true;
 
             await _dbContext.SaveChangesAsync();
 
