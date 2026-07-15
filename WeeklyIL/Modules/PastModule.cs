@@ -14,7 +14,9 @@ public class PastModule(IDbContextFactory<WilDbContext> contextFactory) : Intera
     [SlashCommand("past", "Shows previous levels")]
     public async Task PastLevels()
     {
-        var we = await _dbContext.CurrentWeek(Context.Guild.Id);
+        ulong guildid = _dbContext.EffectiveGuild(Context.Guild.Id);
+        
+        var we = await _dbContext.CurrentWeek(guildid);
         if (we == null)
         {
             await RespondAsync("nope", ephemeral: true);
@@ -23,7 +25,7 @@ public class PastModule(IDbContextFactory<WilDbContext> contextFactory) : Intera
         
         var eb = new EmbedBuilder().WithTitle("Previous levels");
         foreach (var week in _dbContext.Weeks
-                     .Where(w => w.GuildId == Context.Guild.Id)
+                     .Where(w => w.GuildId == guildid)
                      .Where(w => w.StartTimestamp < we.StartTimestamp)
                      .OrderByDescending(w => w.StartTimestamp))
         {
