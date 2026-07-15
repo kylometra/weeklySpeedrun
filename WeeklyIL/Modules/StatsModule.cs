@@ -36,8 +36,8 @@ public class StatsModule(IDbContextFactory<WilDbContext> contextFactory, Discord
 
         var ts = new TimeSpan(totalTime * TimeSpan.TicksPerMillisecond);
         
-        string desc = $"Total submissions: `{submissions.Count()}`\n" + 
-                      $"Total run time: `{ts:d\\:hh\\:mm\\:ss\\.fff}`\n" + 
+        string desc = $"Submissions: `{submissions.Count()}`\n" + 
+                      $"Run time: `{ts:d\\:hh\\:mm\\:ss\\.fff}`\n" + 
                       $"Wins: `{ue.WeeklyWins}`";
 
         var eb = new EmbedBuilder()
