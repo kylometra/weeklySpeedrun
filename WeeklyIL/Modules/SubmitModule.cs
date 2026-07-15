@@ -23,11 +23,11 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
             return;
         }
 
-        ulong guildid = _dbContext.EffectiveGuild(Context.Guild.Id);
+        ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
 
-        weekId ??= (await _dbContext.CurrentWeek(guildid))?.Id ?? 0;
+        weekId ??= (await _dbContext.CurrentWeek(guildId))?.Id ?? 0;
         var we = _dbContext.Weeks
-            .Where(w => w.GuildId == guildid)
+            .Where(w => w.GuildId == guildId)
             .FirstOrDefault(w => w.Id == weekId);
         
         if (we == null || we.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds())
@@ -38,7 +38,7 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
 
         long now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         if (!we.Ended && we.StartTimestamp < _dbContext.Weeks
-                .Where(w => w.GuildId == guildid)
+                .Where(w => w.GuildId == guildId)
                 .Where(w => w.StartTimestamp < now)
                 .OrderBy(w => w.StartTimestamp).Last().StartTimestamp)
         {
@@ -82,11 +82,11 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
     [SlashCommand("blank", "Submits a blank time to the leaderboard - you won't have a time without proof")]
     public async Task NoVideo(ulong? weekId = null)
     {
-        ulong guildid = _dbContext.EffectiveGuild(Context.Guild.Id);
+        ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
         
-        weekId ??= (await _dbContext.CurrentWeek(guildid))?.Id ?? 0;
+        weekId ??= (await _dbContext.CurrentWeek(guildId))?.Id ?? 0;
         var we = await _dbContext.Weeks
-            .Where(w => w.GuildId == guildid)
+            .Where(w => w.GuildId == guildId)
             .FirstOrDefaultAsync(w => w.Id == weekId);
         
         if (we == null || (we.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds() && !await _dbContext.UserIsOrganizer(Context)))

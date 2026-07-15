@@ -25,9 +25,9 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
         bool secret = week?.StartTimestamp > DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         bool organizer = await _dbContext.UserIsOrganizer(Context);
         
-        ulong guildid = _dbContext.EffectiveGuild(Context.Guild.Id);
+        ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
         if (week == null 
-            || week.GuildId != guildid
+            || week.GuildId != guildId
             || (secret && !organizer))
         {
             await RespondAsync("That leaderboard doesn't exist!", ephemeral: true);
@@ -43,7 +43,7 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
         if (isCurrent)
         {
             nw = await _dbContext.Weeks
-                .Where(w => w.GuildId == guildid)
+                .Where(w => w.GuildId == guildId)
                 .Where(w => w.StartTimestamp > now)
                 .OrderBy(w => w.StartTimestamp)
                 .FirstOrDefaultAsync();
@@ -52,7 +52,7 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
         var sb = new SelectMenuBuilder()
             .WithPlaceholder("Select a leaderboard")
             .WithCustomId("view-week");
-        foreach (var w in _dbContext.Weeks.Where(w => w.GuildId == guildid)
+        foreach (var w in _dbContext.Weeks.Where(w => w.GuildId == guildId)
                      .Where(w => w.StartTimestamp <= now)
                      .OrderByDescending(w => (long)w.Id)
                      .Take(25))
