@@ -99,7 +99,7 @@ public static class DbHelper
         return dbContext.Users.Find(id)!;
     }
     
-    public static EmbedBuilder LeaderboardBuilder(this WilDbContext dbContext, DiscordSocketClient client, WeekEntity week, WeekEntity? nextWeek, bool forceVideo, bool showObsolete = false)
+    public static EmbedBuilder LeaderboardBuilder(this WilDbContext dbContext, WeekEntity week, WeekEntity? nextWeek, bool forceVideo, bool showObsolete = false)
     {
         string board = string.Empty;
         int place = 1;

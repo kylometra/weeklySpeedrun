@@ -48,7 +48,7 @@ public class LeaderboardModule(IDbContextFactory<WilDbContext> contextFactory, D
                 .OrderBy(w => w.StartTimestamp)
                 .FirstOrDefaultAsync();
         }
-        var eb = _dbContext.LeaderboardBuilder(client, week, nw, showVideo);
+        var eb = _dbContext.LeaderboardBuilder(week, nw, showVideo);
         var sb = new SelectMenuBuilder()
             .WithPlaceholder("Select a leaderboard")
             .WithCustomId("view-week");

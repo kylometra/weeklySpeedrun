@@ -88,7 +88,7 @@ public partial class ManageModule
                     .FirstOrDefault();
             }
 
-            var eb = _dbContext.LeaderboardBuilder(client, week, nw, showVideo, true);
+            var eb = _dbContext.LeaderboardBuilder(week, nw, showVideo, true);
 
             await RespondAsync(embed: eb.Build(), ephemeral: true);
         }

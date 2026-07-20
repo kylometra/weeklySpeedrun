@@ -23,7 +23,7 @@ public class ViewComponentInteractions(IDbContextFactory<WilDbContext> contextFa
             return;
         }
         
-        var eb = _dbContext.LeaderboardBuilder(client, week, null, false);
+        var eb = _dbContext.LeaderboardBuilder(week, null, false);
         await Context.Interaction.Message.ModifyAsync(m => m.Embed = eb.Build());
         await DeferAsync();
     }

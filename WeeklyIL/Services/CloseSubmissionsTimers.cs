@@ -101,7 +101,7 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
         dbContext.Update(week);
         await dbContext.SaveChangesAsync();
         
-        var eb = dbContext.LeaderboardBuilder(client, week, null, true);
+        var eb = dbContext.LeaderboardBuilder(week, null, true);
         await AnnounceToProxyGuilds(week.GuildId, "Submissions closed! This is the leaderboard as of now:", embed: eb.Build());
 
         var currentWeek = await dbContext.CurrentWeek(week.GuildId);
