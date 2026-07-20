@@ -23,16 +23,20 @@ public static class DbHelper
         await dbContext.SaveChangesAsync();
     }
     
-    public static async Task CreateUserIfNotExists(this WilDbContext dbContext, ulong id)
+    public static async Task CreateUserIfNotExists(this WilDbContext dbContext, SocketUser user)
     {
-        if (dbContext.Users.Any(g => g.Id == id))
+        var ue = await dbContext.Users.FindAsync(user.Id);
+        if (ue is not null)
         {
+            ue.Username = user.Username;
+            await dbContext.SaveChangesAsync();
             return;
         }
 
         await dbContext.Users.AddAsync(new UserEntity
         {
-            Id = id
+            Id = user.Id,
+            Username = user.Username
         });
         
         await dbContext.SaveChangesAsync();
@@ -108,13 +112,11 @@ public static class DbHelper
                 .GroupBy(s => s.UserId)
                 .Select(g => g.OrderBy(s => s.TimeMs).First());
         }
-
-        client.GetGuild(week.GuildId).DownloadUsersAsync().Wait();
         
         foreach (var score in scores.AsEnumerable().OrderBy(s => s.TimeMs))
         {
-            var u = client.GetUser(score.UserId);
-            string name = u == null ? "unknown" : u.Username;
+            var u = dbContext.User(score.UserId);
+            string name = u.Username;
             
             if (score.Video == null)
             {

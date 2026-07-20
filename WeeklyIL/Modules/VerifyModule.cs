@@ -104,9 +104,6 @@ public class VerifyModule(
             
             uint place = (uint)(bestTimes.Count(x => x.BestTime < score.TimeMs) + 1);
 
-            await Context.Guild.DownloadUsersAsync();
-            var user = Context.Guild.GetUser(score.UserId);
-
             if (place != 0) // is pb
             {
                 string placeStr = place.ToString();
@@ -127,15 +124,14 @@ public class VerifyModule(
                 bool isCurrent = week.Id == (await _dbContext.CurrentWeek(week.GuildId))?.Id;
                 placeStr = !isCurrent || week.ShowVideo ? $"[{placeStr} place PB]({score.Video})" : $"{placeStr} place PB";
                 string timeStr = ts.Hours == 0 ? $@"{ts:mm\:ss\.fff}" : $@"{ts:hh\:mm\:ss}";
-                await channel.SendMessageAsync($@"{user.Mention} got a {placeStr} with a time of `{timeStr}` on {level}!");
+                await channel.SendMessageAsync($"<@{score.UserId}> got a {placeStr} with a time of `{timeStr}` on {level}!");
             }
-                
 
-            await user.AddRolesAsync(_dbContext.Guilds
+            await client.Rest.AddRoleAsync(Context.Guild.Id, score.UserId, _dbContext.Guilds
                 .Include(g => g.GameRoles)
                 .First(g => g.Id == week.GuildId).GameRoles
-                .Where(r => r.Game == week.Game)
-                .Select(r => r.RoleId));
+                .First(r => r.Game == week.Game).RoleId
+            );
         }
         catch (Exception e)
         {

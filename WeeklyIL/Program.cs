@@ -19,7 +19,7 @@ using var host = Host.CreateDefaultBuilder(args)
         services.AddDbContextFactory<WilDbContext>();
         services.AddSingleton(new DiscordSocketClient(new DiscordSocketConfig
         {
-            GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.GuildMembers
+            GatewayIntents = GatewayIntents.AllUnprivileged
         }));
         services.AddSingleton<InteractionService>();
         services.AddSingleton<CloseSubmissionsTimers>();

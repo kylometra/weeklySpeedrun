@@ -16,6 +16,7 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
     public async Task WithVideo(string video, ulong? weekId = null)
     {
         await _dbContext.CreateGuildIfNotExists(Context.Guild.Id);
+        await _dbContext.CreateUserIfNotExists(Context.User);
 
         ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
         ulong subChannel = _dbContext.Guilds.First(g => g.Id == guildId).SubmissionsChannel;
@@ -82,6 +83,9 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
     [SlashCommand("blank", "Submits a blank time to the leaderboard - you won't have a time without proof")]
     public async Task NoVideo(ulong? weekId = null)
     {
+        await _dbContext.CreateGuildIfNotExists(Context.Guild.Id);
+        await _dbContext.CreateUserIfNotExists(Context.User);
+        
         ulong guildId = _dbContext.EffectiveGuild(Context.Guild.Id);
         
         weekId ??= (await _dbContext.CurrentWeek(guildId))?.Id ?? 0;
@@ -105,13 +109,13 @@ public class SubmitModule(IDbContextFactory<WilDbContext> contextFactory, Discor
         await _dbContext.SaveChangesAsync();
         
         await RespondAsync("Submitted without proof! You'll show up on the leaderboard without a time.", ephemeral: true);
-        
-        var user = Context.Guild.GetUser(Context.User.Id);
-        await user.AddRolesAsync(_dbContext.Guilds
+
+        var user = Context.User as SocketGuildUser;
+        await user!.AddRoleAsync(_dbContext.Guilds
             .Include(g => g.GameRoles)
             .First(g => g.Id == we.GuildId).GameRoles
-            .Where(r => r.Game == we.Game)
-            .Select(r => r.RoleId));
+            .First(r => r.Game == we.Game).RoleId
+        );
     }
 }
 

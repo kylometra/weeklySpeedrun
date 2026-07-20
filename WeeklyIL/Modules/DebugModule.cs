@@ -22,12 +22,12 @@ public partial class ManageModule
         [RequireOwner]
         public async Task ClearStats(SocketGuildUser? user = null)
         {
-            user ??= client.GetGuild(Context.Guild.Id).GetUser(Context.User.Id);
-
+            user ??= Context.User as SocketGuildUser;
+            
             await _dbContext.CreateGuildIfNotExists(Context.Guild.Id);
-            await _dbContext.CreateUserIfNotExists(user.Id);
+            await _dbContext.CreateUserIfNotExists(user);
 
-            var ue = _dbContext.User(user.Id);
+            var ue = _dbContext.User(Context.User.Id);
             ue.WeeklyWins = 0;
             await _dbContext.SaveChangesAsync();
 

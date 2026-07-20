@@ -115,18 +115,15 @@ public class CloseSubmissionsTimers(IDbContextFactory<WilDbContext> contextFacto
 
         if (first == null) return true; // sad
 
-        await dbContext.CreateUserIfNotExists(first.UserId);
-
         var ue = dbContext.User(first.UserId);
         ue.WeeklyWins++;
 
-        var guild = client.GetGuild(week.GuildId);
-        var user = guild.GetUser(first.UserId);
         var weeklyRoles = dbContext.Guilds
             .Include(g => g.WeeklyRoles)
             .First(g => g.Id == week.GuildId).WeeklyRoles;
-        await user.RemoveRolesAsync(weeklyRoles.Select(r => r.RoleId));
-        await user.AddRoleAsync(weeklyRoles
+        
+        foreach (var role in weeklyRoles) await client.Rest.RemoveRoleAsync(week.GuildId, first.UserId, role.RoleId);
+        await client.Rest.AddRoleAsync(week.GuildId, first.UserId, weeklyRoles
             .Where(r => r.Requirement <= ue.WeeklyWins)
             .MaxBy(r => r.Requirement)!.RoleId);
 

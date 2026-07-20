@@ -20,6 +20,7 @@ public class UserEntity
 {
     [Key]
     public ulong Id { get; set; }
+    public string Username { get; set; }
     public uint WeeklyWins { get; set; }
 }
 

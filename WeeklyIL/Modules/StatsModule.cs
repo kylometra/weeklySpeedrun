@@ -14,10 +14,10 @@ public class StatsModule(IDbContextFactory<WilDbContext> contextFactory, Discord
     [SlashCommand("stats", "Get stats for a user")]
     public async Task GetStats(SocketGuildUser? user = null)
     {
-        user ??= client.GetGuild(Context.Guild.Id).GetUser(Context.User.Id);
+        user ??= Context.User as SocketGuildUser;
         
         await _dbContext.CreateGuildIfNotExists(Context.Guild.Id);
-        await _dbContext.CreateUserIfNotExists(user.Id);
+        await _dbContext.CreateUserIfNotExists(user);
 
         var ue = _dbContext.User(user.Id);
 
@@ -42,7 +42,7 @@ public class StatsModule(IDbContextFactory<WilDbContext> contextFactory, Discord
                       $"Wins: `{ue.WeeklyWins}`";
 
         var eb = new EmbedBuilder()
-            .WithTitle($"{user.Username}'s stats")
+            .WithTitle($"{ue.Username}'s stats")
             .WithDescription(desc)
             .WithColor(user.Roles.Where(r => r.Color != default).MaxBy(r => r.Position)!.Color);
 
